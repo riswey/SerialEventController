@@ -1,9 +1,11 @@
-#pragma once
 
 /*
 * Packets look like this:
 * SHIFT_OUT + SHIFT_OUT + COMMAND_CHR [+ body string] + NEW_LINE
 */
+
+#ifndef SERIAL_EVENT_CONTROLLER
+#define SERIAL_EVENT_CONTROLLER
 
 typedef void(*serialeventhandler_t)(int chr, String data);
 
@@ -68,3 +70,5 @@ public:
 };
 
 SerialEventController SEController;
+
+#endif
