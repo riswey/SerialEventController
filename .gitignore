@@ -259,3 +259,7 @@ paket-files/
 # Python Tools for Visual Studio (PTVS)
 __pycache__/
 *.pyc
+/SerialEventController/__vm/.SerialEventController.vsarduino.h
+/SerialEventController/__vm/Compile.vmps.xml
+/SerialEventController/__vm/Configuration.Debug.vmps.xml
+/SerialEventController/__vm/Upload.vmps.xml
