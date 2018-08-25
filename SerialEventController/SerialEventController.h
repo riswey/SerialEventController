@@ -15,21 +15,35 @@ typedef void(*serialeventhandler_t)(int chr, String data);
 class SerialEventController {
 	//just hardcoded for now
 	String SIGNATURE = "\x0E\x0E";    //Shift Out
-	const char terminal = '\n';             //\n
+	const char TERMINAL = '\n';             //\n
 	String buf = "";  //remember: volatile if changed by interrupt!
 
 	serialeventhandler_t eventfuncs[MAXEVENTS];
 	String eventindex = "";   //chr at position maps to eventfuncs[]
 
+	String encodePacket(const byte cmd, const String data) {
+		return SIGNATURE + (char)cmd + data + TERMINAL;
+	}
+
+	int decodePacket(const String packet, byte& cmd, String& data)
+	{
+		cmd = 0; data = "";
+		if (packet.length() < 3) return 1;                                        //header too small (min 3)
+		if (packet.substring(0, 2) != SIGNATURE) return 2;                      //packet signature failed
+		//pre-trimmed
+		cmd = (byte)packet[2];
+		data = packet.substring(3);
+		return 0;
+	}
+
 	int HandleLine(const String line) { //must be pre-trimmed!
-		if (line.length() < 3) return 1;  //header failed
-		if (line.substring(0, 2) != SIGNATURE) return 1;  //Signature failed
-		char chr = line[2];
-		String data = line.substring(3);
+		byte cmd;
+		String data;
+		decodePacket(line, cmd, data);
 
-		int idx = eventindex.indexOf(chr);
+		int idx = eventindex.indexOf((char)cmd);
 
-		eventfuncs[idx](chr, data);
+		eventfuncs[idx]((char)cmd, data);
 		return 0;
 	}
 
@@ -46,7 +60,7 @@ public:
 	}
 
 	bool AddCharacter(const char c) {
-		if (c == terminal) {
+		if (c == TERMINAL) {
 			HandleLine(buf);
 			buf = "";
 		}
@@ -55,16 +69,16 @@ public:
 		}
 	}
 
-	void SendData(const char c, const String data) {
-		Serial.println(SIGNATURE + c + data);
+	void SendData(const byte c, const String data) {
+		Serial.print( encodePacket(c,data) );
 	}
 
-	void SendData(const char c, const int data) {
-		Serial.println(SIGNATURE + c + String(data));
+	void SendData(const byte c, const int data) {
+		Serial.print( encodePacket(c, String(data)) );
 	}
 
-	void SendData(const char c, const float data) {
-		Serial.println(SIGNATURE + c + String(data));
+	void SendData(const byte c, const float data) {
+		Serial.print( encodePacket(c, String(data)) );
 	}
 
 };
