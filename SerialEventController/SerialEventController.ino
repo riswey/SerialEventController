@@ -6,15 +6,24 @@
 
 #include "SerialEventController.h"
 
-enum CMD {
-	DESIREDSPEED = 34,
+enum CMD : byte
+{
+	TEST = 32,
 	START,
 	STOP,
-	REQUESTSPEED
+	SETSPEED,
+	REQSPEED,
+	SETP,
+	SETI,
+	SETD,
+	REQCSV_PID      //return a comma separated list of values
 };
 
 //example Arduino state that can be set and interrogated
 int pidspeed = 100;
+float p = 10.1f;
+float i = 20.2f;
+float d = 30.3f;
 
 void serialEvent() {
 	while (Serial.available()) {
@@ -28,14 +37,24 @@ void serialEvent() {
 
 //;;;;; SEController calls these functions when registered character appears in serial line
 
-//
-static void setPIDSpeed(int cmd, String data) {
-	pidspeed = data.toInt();
-	//why not update the client? Optional
-	SEController.SendData(REQUESTSPEED, pidspeed);
+static void setPara(int cmd, String data) {
+	switch (cmd) {
+	case SETSPEED:
+		pidspeed = data.toInt();
+		break;
+	case SETP:
+		p = data.toFloat();
+		break;
+	case SETI:
+		i = data.toFloat();
+		break;
+	case SETD:
+		d = data.toFloat();
+		break;
+	}
 }
 
-static void someOtherEvents(int cmd, String data) {
+static void motorControl(int cmd, String data) {
 	switch (cmd) {
 	case START:
 		//do something
@@ -46,25 +65,39 @@ static void someOtherEvents(int cmd, String data) {
 	}
 }
 
-static void requestPIDSpeed(int cmd, String data) {
+static void requestStatus(int cmd, String unused) {
 	switch (cmd) {
-	case REQUESTSPEED:
+	case REQSPEED:
 		//NOTE: echo the cmd code
 		SEController.SendData(cmd, pidspeed);
+		break;
+	case REQCSV_PID:
+		String data = String(p) + "," + String(i) + "," + String(d);
+		SEController.SendData(cmd, data);
 		break;
 	}
 }
 
+static void testFunc(int cmd, String unused) {
+	String data = "State=" + String(pidspeed) + "," + String(p) + "," + String(i) + "," + String(d);
+	SEController.SendData(cmd, data);
+}
+
 void setup()
 {
-	//;;;;; NOTE
-	//Single function pattern
-	SEController.RegisterEventHandler(DESIREDSPEED, setPIDSpeed);
-	//Switch pattern
-	SEController.RegisterEventHandler(START, someOtherEvents);
-	SEController.RegisterEventHandler(STOP, someOtherEvents);
-	//Request data
-	SEController.RegisterEventHandler(REQUESTSPEED, requestPIDSpeed);
+	//;;;;; Register Handlers
+	SEController.RegisterEventHandler(SETSPEED, setPara);
+	SEController.RegisterEventHandler(SETP, setPara);
+	SEController.RegisterEventHandler(SETI, setPara);
+	SEController.RegisterEventHandler(SETD, setPara);
+
+	SEController.RegisterEventHandler(START, motorControl);
+	SEController.RegisterEventHandler(STOP, motorControl);
+
+	SEController.RegisterEventHandler(REQSPEED, requestStatus);
+	SEController.RegisterEventHandler(REQCSV_PID, requestStatus);
+
+	SEController.RegisterEventHandler(TEST, testFunc);
 
 	Serial.begin(9600);
 }
